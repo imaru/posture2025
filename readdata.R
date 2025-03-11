@@ -58,7 +58,7 @@ cbind(joi,ccc[2:length(joi)+1])
 gwrst<-ggplot(data=lwrst, aes(x=frame, y=dist, colour = name))+geom_line(alpha=0.3)
 gwrst<-gwrst+scale_color_manual(values=c("#111111","#555555"))
 
-gbody<-ggplot(data=lbody, aes(x=frame, y=dist, colour=name))+geom_line(alpha=0.3)+ylim(c(0,100))
+gbody<-ggplot(data=lbody, aes(x=frame, y=dist, colour=name))+geom_line(alpha=0.3)+ylim(c(0,300))
 gbody<-gbody+scale_color_manual(values=c("#FF0000","#FF8888","#00FF00","#88FF88","#0000FF","#8888FF"))
 
 grid.arrange(gwrst,gbody,nrow=2)
