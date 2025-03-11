@@ -28,9 +28,9 @@ for (i in 1:nf){
 colnames(jdf)<-c('frame','joint','xdt','ydt','cdt')
 jdf$joint<-as.factor(jdf$joint)
 
-g<-ggplot(data=jdf[which(jdf$joint==4 |jdf$joint==7 ),], aes(x=xdt, y=ydt, color=joint))+geom_point()
+g<-ggplot(data=jdf[which(jdf$joint==4 |jdf$joint==7 ),], aes(x=xdt, y=740-ydt, color=joint))+geom_point()
 #g<-ggplot(data=jdf, aes(x=xdt, y=500-ydt, color=joint))+geom_point()
-g<-g+xlim(c(400,800))+ylim(c(0,400))
+g<-g+xlim(c(0,1280))+ylim(c(0,720))
 plot(g)
 # 0: head
 # 1: neck
