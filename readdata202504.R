@@ -7,7 +7,10 @@ library(gridExtra)
 joi<-c('WRIST_RIGHT','HEAD','SHOULDER_RIGHT','HIP_RIGHT', 'KNEE_RIGHT')
 wrst<-'WRIST_RIGHT'
 
-thr<-1.6
+thr<-5.0
+tlen<-10
+bfreq<-200
+kfreq<-30
 
 fn<-file.choose()
 dat<-jsonlite::read_json(fn, simplifyVector = TRUE)
@@ -17,7 +20,7 @@ btemp<-read.table(bfn, skip=1)
 colnames(btemp)<-c('Time','CpX','CpY','BL','BR','TL','TR','Wgt','RBL','RBR','RTL','RTR')
 ndat<-nrow(btemp)
 
-maxtbal<-max(which(scale(btemp$CpX)>thr))
+maxtbal<-max(which(scale(btemp$CpX)>thr & btemp$Time < max(btemp$Time)-tlen*60))
 bdat<-btemp[(maxtbal+1):ndat,]
 
 lbdat<-pivot_longer(data=bdat, cols=-Time,values_to = 'pos', names_to = 'param')
@@ -45,12 +48,14 @@ colnames(joidat)<-c('frame','joi','x','y','z')
 stddat<-data.frame()
 for (i in 1:length(joi)){
   temp <- cbind(joidat[which(joidat$joi==joi[i]),c(3:5)] %>% lapply(as.numeric) %>% data.frame  %>% lapply(scale) %>% data.frame)
-  temp <- cbind(joi[i],1:max(as.numeric(joidat$frame)),1:max(as.numeric(joidat$frame))/30, temp)
+  temp <- cbind(joi[i],min(as.numeric(joidat$frame)):max(as.numeric(joidat$frame)),min(as.numeric(joidat$frame)):max(as.numeric(joidat$frame))/30, temp)
   stddat<-rbind(stddat, temp)
 }
 colnames(stddat)<-c('joi','frame','time' ,'x','y','z')
 wrsd<-stddat[which(stddat$joi==wrst),]$y
-maxtpos<-max(which(abs(wrsd)>thr))
+oth<-which(abs(wrsd)>thr)
+maxtpos<-max(oth[which(oth<(nfrm/kfreq-tlen*60)*kfreq)])
+#maxtpos<-max(which(abs(wrsd)>thr))
 stddat<-stddat[which(stddat$frame>maxtpos),]
 lstddat<-pivot_longer(stddat, cols=c('x','y','z'), values_to = 'pos')
 
