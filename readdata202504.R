@@ -5,9 +5,10 @@ library(ggpp)
 library(gridExtra)
 
 joi<-c('WRIST_RIGHT','HEAD','SHOULDER_RIGHT','HIP_RIGHT', 'KNEE_RIGHT')
+#joi<-c('WRIST_RIGHT','HEAD','SHOULDER_LEFT','HIP_LEFT', 'KNEE_LEFT')
 wrst<-'WRIST_RIGHT'
 
-thr<-5.0
+thr<-1
 tlen<-10
 bfreq<-200
 kfreq<-30
@@ -20,7 +21,7 @@ btemp<-read.table(bfn, skip=1)
 colnames(btemp)<-c('Time','CpX','CpY','BL','BR','TL','TR','Wgt','RBL','RBR','RTL','RTR')
 ndat<-nrow(btemp)
 
-maxtbal<-max(which(scale(btemp$CpX)>thr & btemp$Time < max(btemp$Time)-tlen*60))
+maxtbal<-max(which(abs(scale(btemp$CpX))>thr & btemp$Time < max(btemp$Time)-tlen*60))
 bdat<-btemp[(maxtbal+1):ndat,]
 
 lbdat<-pivot_longer(data=bdat, cols=-Time,values_to = 'pos', names_to = 'param')
@@ -94,6 +95,9 @@ ghead<-ggplot(data=lstddat[which(lstddat$joi=='HEAD'),], aes(x=time, y=pos, colo
 gshrd<-ggplot(data=lstddat[which(lstddat$joi=='SHOULDER_RIGHT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
 ghip<-ggplot(data=lstddat[which(lstddat$joi=='HIP_RIGHT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
 gwrst<-ggplot(data=lstddat[which(lstddat$joi=='WRIST_RIGHT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
+#gshrd<-ggplot(data=lstddat[which(lstddat$joi=='SHOULDER_LEFT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
+#ghip<-ggplot(data=lstddat[which(lstddat$joi=='HIP_LEFT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
+
 gbalance<-ggplot(lbdat[grep('Cp',lbdat$param),], aes(x=Time, y=pos, color=param))+geom_line()+theme(legend.position = "top")
 grid.arrange(ghead,gshrd,ghip,gbalance, nrow=4)
 print(c(mean(abs(bdat$CpX)),mean(abs(bdat$CpY))))
