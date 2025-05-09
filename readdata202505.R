@@ -11,7 +11,7 @@ joi<-c('WRIST_RIGHT','HEAD','SHOULDER_RIGHT','HIP_RIGHT', 'KNEE_RIGHT')
 wrst<-'WRIST_RIGHT'
 
 # 実験開始時の大きな動きの検出閾値 1の場合、この設定は使用しない
-thr<-1
+thr<-2
 
 # 測定時間の長さ。計測終了からこの時間の長さだけを解析対象とする
 tlen<-10
