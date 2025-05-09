@@ -10,6 +10,7 @@ wrst<-'WRIST_RIGHT'
 
 thr<-1
 tlen<-10
+#tlen<-3
 bfreq<-200
 kfreq<-30
 
@@ -23,9 +24,16 @@ ndat<-nrow(btemp)
 
 maxtbal<-max(which(abs(scale(btemp$CpX))>thr & btemp$Time < max(btemp$Time)-tlen*60))
 bdat<-btemp[(maxtbal+1):ndat,]
+bdat$deg <- atan(bdat$CpY/bdat$CpX)*180/pi
+bdat[which(bdat$CpX<=0),]$deg <- bdat[which(bdat$CpX<=0),]$deg + 180
+bdat[which(bdat$CpX>0 & bdat$CpY<0),]$deg <- bdat[which(bdat$CpX>0 & bdat$CpY<0),]$deg + 360
+bdat$scl <- sqrt(bdat$CpX^2 + bdat$CpY^2)
 
-lbdat<-pivot_longer(data=bdat, cols=-Time,values_to = 'pos', names_to = 'param')
+lbdat<-pivot_longer(data=bdat, cols=-Time,values_to = 'value', names_to = 'param')
 
+gdeg<-ggplot(lbdat[grep('deg',lbdat$param),], aes(x=Time, y=value))+geom_point()+ggtitle('orientation')
+gscl<-ggplot(lbdat[grep('scl',lbdat$param),], aes(x=Time, y=value))+geom_line()+ggtitle('wight')
+grid.arrange(gdeg,gscl, nrow=2)
 
 nfrm<-length(dat$frames$bodies)
 
@@ -98,7 +106,10 @@ gwrst<-ggplot(data=lstddat[which(lstddat$joi=='WRIST_RIGHT'),], aes(x=time, y=po
 #gshrd<-ggplot(data=lstddat[which(lstddat$joi=='SHOULDER_LEFT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
 #ghip<-ggplot(data=lstddat[which(lstddat$joi=='HIP_LEFT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
 
-gbalance<-ggplot(lbdat[grep('Cp',lbdat$param),], aes(x=Time, y=pos, color=param))+geom_line()+theme(legend.position = "top")
+gbalance<-ggplot(lbdat[grep('Cp',lbdat$param),], aes(x=Time, y=value, color=param))+geom_line()+theme(legend.position = "top")
 grid.arrange(ghead,gshrd,ghip,gbalance, nrow=4)
+
+
+
 print(c(mean(abs(bdat$CpX)),mean(abs(bdat$CpY))))
 
