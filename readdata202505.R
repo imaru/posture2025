@@ -59,6 +59,11 @@ names(cumleng)<-as.factor(seq(1,nprd)*lendur)
 barplot(cumleng, xlab='time(sec)', ylab='trace length')
 title(paste0(as.character(cumleng[nprd/2]),'/',as.character(cumleng[nprd])))
 
+res<-nls(cumleng~a*seq(1,nprd)^b, start=c(a=1, b=1))
+
+# 1.104, 1.181, 0981
+# 1.083, 1.204, 1.04
+
 # long形式への変換
 lbdat<-pivot_longer(data=bdat, cols=-Time,values_to = 'value', names_to = 'param')
 
