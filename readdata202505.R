@@ -14,11 +14,11 @@ wrst<-'WRIST_RIGHT'
 thr<-2
 
 # 測定時間の長さ。計測終了からこの時間の長さだけを解析対象とする
-tlen<-10
+tlen<-8
 #tlen<-3
 
 # バランスボードのサンプリングレート
-bfreq<-200
+bfreq<-10
 
 # Kinectのサンプリングレート
 kfreq<-30
@@ -49,10 +49,10 @@ difflen<-array(NA,c(datlen-1,1))
 for (i in 2:datlen){
   difflen[i-1]<-sqrt((bdat$CpX[i]-bdat$CpX[i-1])^2+(bdat$CpY[i]-bdat$CpY[i-1])^2)
 }
-nprd<-floor(datlen/((1000/bfreq)*lendur))
+nprd<-floor(datlen/(bfreq*lendur))
 leng<-array(NA,c(nprd,1))
 for (i in 1:nprd){
-  leng[i]<-sum(difflen[(1+(i-1)*((1000/bfreq)*lendur)):(((1000/bfreq)*lendur)*i)])
+  leng[i]<-sum(difflen[(1+(i-1)*(bfreq*lendur)):((bfreq*lendur)*i)])
 }
 cumleng<-cumsum(leng)
 names(cumleng)<-as.factor(seq(1,nprd)*lendur)
