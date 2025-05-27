@@ -30,8 +30,9 @@ colnames(btemp)<-c('Time','CpX','CpY','BL','BR','TL','TR','Wgt','RBL','RBR','RTL
 ndat<-nrow(btemp)
 
 # 解析対象時間の設定
-maxtbal<-max(which(abs(scale(btemp$CpX))>thr & btemp$Time < max(btemp$Time)-tlen*60))
-bdat<-btemp[(maxtbal+1):ndat,]
+# maxtbal<-max(which(abs(scale(btemp$CpX))>thr & btemp$Time < max(btemp$Time)-tlen*60))
+maxtbal<-max(which(btemp$Time < max(btemp$Time)-tlen*60))
+bdat<-btemp[maxtbal:ndat,]
 datlen<-nrow(bdat)
 
 # 重心方向の算出
