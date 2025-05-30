@@ -15,7 +15,7 @@ thr<-2
 
 # 測定時間の長さ。計測終了からこの時間の長さだけを解析対象とする
 tlen<-8
-#tlen<-3
+#tlen<-1
 
 # バランスボードのサンプリングレート
 bfreq<-10
@@ -31,7 +31,7 @@ ndat<-nrow(btemp)
 
 # 解析対象時間の設定
 # maxtbal<-max(which(abs(scale(btemp$CpX))>thr & btemp$Time < max(btemp$Time)-tlen*60))
-maxtbal<-max(which(btemp$Time < max(btemp$Time)-tlen*60))
+maxtbal<-max(which(btemp$Time < max(btemp$Time)-tlen*60))-1
 bdat<-btemp[maxtbal:ndat,]
 datlen<-nrow(bdat)
 
@@ -61,7 +61,7 @@ barplot(cumleng, xlab='time(sec)', ylab='trace length')
 title(paste0(as.character(cumleng[nprd/2]),'/',as.character(cumleng[nprd])))
 
 res<-nls(cumleng~a*seq(1,nprd)^b, start=c(a=1, b=1))
-
+print(res)
 # 1.104, 1.181, 0981
 # 1.083, 1.204, 1.04
 
