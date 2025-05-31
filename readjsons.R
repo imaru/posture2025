@@ -6,18 +6,24 @@ library(rlist)
 library(pipeR)
 
 jntn<-c('Head','Neck','rSldr','rElbw','rWrst','lSldr','lElbw','lWrst','Wst','rHip','rknee','rAnkl','lHip','lKnee','lAnkl','rEye','lEye','rEar','lEar','lToe','lHeel','rToe','rHeel')
+fr<-30
+
+# ここからの6行を変更する必要がある
 xwid<-720 # 動画の縦サイズ
 ywid<-1280 # 動画の横サイズ
 height<-165 # 被写体の身長
+jd<-'data' # データが入っているフォルダ名
+begT<-0 # 解析開始時間（秒）、0の場合は最初から
+durT<-0 # 解析時間の長さ（秒）、0の場合は最後まで。
+jnt1<-22 # 表示する関節1, 関節番号はスクリプトの末尾参照
+jnt2<-24 # 表示する関節2
 
-jd<-'data'
+# jd<-file.choose()
+
 files<-dir(jd,'*.json')
 nf<-length(files)
 njnt<-23
 jofi<-c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21, 22, 24)
-
-jnt1<-4
-jnt2<-7
 
 
 jdf<-data.frame()
@@ -32,6 +38,11 @@ for (i in 1:nf){
 }
 colnames(jdf)<-c('frame','joint','xdt','ydt','cdt')
 jdf[which(jdf[,3]==0),3:5]<-NA
+
+if (begT>0 | durT){
+  jdf<-jdf[jdf$frame>=begT*fr,]
+  jdf<-jdf[jdf$frame<=begT*fr+durT*fr,]
+}
 
 tall<-abs(max(jdf[which(jdf$joint==0),4],na.rm=T)-min(jdf[which(jdf$joint==21),4],na.rm=T))
 #smr<-data.frame(matrix(NA,length(jofi),9))
@@ -52,8 +63,10 @@ g<-ggplot(data=jdf[which(jdf$joint==jnt1 |jdf$joint==jnt2 ),], aes(x=xdt, y=ywid
 g<-g+xlim(c(0,xwid))+ylim(c(0,ywid))+scale_color_hue(labels=c(jntn[jnt1==jofi],jntn[jnt2==jofi]))
 plot(g)
 
+if (begT>0 | durT){
+  print(paste0(as.character(begT),'s-',as.character((begT+durT)), 's'))
+}
 print(smr)
-
 
 # 0: head
 # 1: neck
