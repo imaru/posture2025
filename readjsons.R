@@ -10,7 +10,7 @@ xwid<-720 # 動画の縦サイズ
 ywid<-1280 # 動画の横サイズ
 height<-165 # 被写体の身長
 
-jd<-choose.dir('.')
+jd<-'data'
 files<-dir(jd,'*.json')
 nf<-length(files)
 njnt<-23
@@ -19,9 +19,10 @@ jofi<-c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 21
 jnt1<-4
 jnt2<-7
 
+
 jdf<-data.frame()
 for (i in 1:nf){
-  jsdt<-read_json(paste(jd, '\\', files[i], sep=''))
+  jsdt<-read_json(paste(jd, '/', files[i], sep=''))
   datkp<-jsdt$people[[1]]$pose_keypoints_2d
   xdt<-unlist(datkp[jofi*3+1])
   ydt<-unlist(datkp[jofi*3+2])
@@ -29,21 +30,22 @@ for (i in 1:nf){
   thisd<-cbind(i, jofi, xdt, ydt, cdt)
   jdf<-rbind(jdf,thisd)
 }
+colnames(jdf)<-c('frame','joint','xdt','ydt','cdt')
 jdf[which(jdf[,3]==0),3:5]<-NA
 
 tall<-abs(max(jdf[which(jdf$joint==0),4],na.rm=T)-min(jdf[which(jdf$joint==21),4],na.rm=T))
-smr<-data.frame(matrix(NA,length(jofi),9))
+#smr<-data.frame(matrix(NA,length(jofi),9))
+smr<-data.frame()
 for (i in 1:length(jofi)){
-  print(i)
-  smr[i,1:5]<-c(jntn[i],min(jdf[which(jdf$joint==jofi[i]),3],na.rm=T),max(jdf[which(jdf$joint==jofi[i]),3],na.rm=T),min(jdf[which(jdf$joint==jofi[i]),4],na.rm=T),max(jdf[which(jdf$joint==jofi[i]),4],na.rm=T))
+  smr[i,1]<-jntn[i]
+  smr[i,2:5]<-c(min(jdf[which(jdf$joint==jofi[i]),3],na.rm=T),max(jdf[which(jdf$joint==jofi[i]),3],na.rm=T),min(jdf[which(jdf$joint==jofi[i]),4],na.rm=T),max(jdf[which(jdf$joint==jofi[i]),4],na.rm=T))
 }
 
-smr[,6]<-smr[,3]-smr[,2]
-smr[,7]<-smr[,5]-smr[,4]
+smr<-cbind(smr,smr[,3]-smr[,2])
+smr<-cbind(smr,smr[,5]-smr[,4])
 smr[,8:9]<-smr[,6:7]/tall*height
 colnames(smr)<-c('jnt','minX','maxX','minY','maxY','rangeX','rangeY','rangeX(cm)','rangeY(cm)')
 
-colnames(jdf)<-c('frame','joint','xdt','ydt','cdt')
 jdf$joint<-as.factor(jdf$joint)
 g<-ggplot(data=jdf[which(jdf$joint==jnt1 |jdf$joint==jnt2 ),], aes(x=xdt, y=ywid-ydt, color=joint))+geom_point(na.rm=T)
 #g<-ggplot(data=jdf, aes(x=xdt, y=500-ydt, color=joint))+geom_point()
