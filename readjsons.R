@@ -13,8 +13,8 @@ xwid<-720 # 動画の縦サイズ
 ywid<-1280 # 動画の横サイズ
 height<-165 # 被写体の身長
 jd<-'data' # データが入っているフォルダ名
-begT<-0 # 解析開始時間（秒）、0の場合は最初から
-durT<-0 # 解析時間の長さ（秒）、0の場合は最後まで。
+begT<-10 # 解析開始時間（秒）、0の場合は最初から
+durT<-10 # 解析時間の長さ（秒）、0の場合は最後まで。
 jnt1<-4 # 表示する関節1, 関節番号はスクリプトの末尾参照
 jnt2<-7 # 表示する関節2
 
@@ -39,8 +39,9 @@ for (i in 1:nf){
 colnames(jdf)<-c('frame','joint','xdt','ydt','cdt')
 jdf[which(jdf[,3]==0),3:5]<-NA
 
-if (begT>0 | durT){
-  jdf<-jdf[jdf$frame>=begT*fr,]
+
+jdf<-jdf[jdf$frame>=begT*fr,]
+if (durT>0){
   jdf<-jdf[jdf$frame<=begT*fr+durT*fr,]
 }
 
