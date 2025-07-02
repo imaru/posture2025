@@ -90,47 +90,6 @@ plot(gstrace)
 gexp<-ggplot(data=rslt,aes(x=V2, y=V5, colour = as.factor(V3)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
 plot(gexp)
 
-# バランスボードデータ読み込み
-bfn<-file.choose()
-btemp<-read.table(bfn, skip=1)
-colnames(btemp)<-c('Time','CpX','CpY','BL','BR','TL','TR','Wgt','RBL','RBR','RTL','RTR')
-ndat<-nrow(btemp)
-
-# 解析対象時間の設定
-# maxtbal<-max(which(abs(scale(btemp$CpX))>thr & btemp$Time < max(btemp$Time)-tlen*60))
-maxtbal<-max(which(btemp$Time < max(btemp$Time)-60))-1
-bdat<-btemp[maxtbal:ndat,]
-datlen<-nrow(bdat)
-
-# 重心方向の算出
-bdat$deg <- atan(bdat$CpY/bdat$CpX)*180/pi
-bdat[which(bdat$CpX<=0),]$deg <- bdat[which(bdat$CpX<=0),]$deg + 180
-bdat[which(bdat$CpX>0 & bdat$CpY<0),]$deg <- bdat[which(bdat$CpX>0 & bdat$CpY<0),]$deg + 360
-# 重心までの距離の算出
-bdat$scl <- sqrt(bdat$CpX^2 + bdat$CpY^2)
-
-# 軌跡長の算出
-# 集計単位
-lendur <- 10
-
-difflen<-array(NA,c(datlen-1,1))
-for (i in 2:datlen){
-  difflen[i-1]<-sqrt((bdat$CpX[i]-bdat$CpX[i-1])^2+(bdat$CpY[i]-bdat$CpY[i-1])^2)
-}
-nprd<-floor(datlen/(bfreq*lendur))
-leng<-array(NA,c(nprd,1))
-for (i in 1:nprd){
-  leng[i]<-sum(difflen[(1+(i-1)*(bfreq*lendur)):((bfreq*lendur)*i)])
-}
-cumleng<-cumsum(leng)
-names(cumleng)<-as.factor(seq(1,nprd)*lendur)
-barplot(cumleng, xlab='time(sec)', ylab='trace length')
-title(paste0(as.character(cumleng[nprd/2]),'/',as.character(cumleng[nprd])))
-
-res<-nls(cumleng~a*seq(1,nprd)^b, start=c(a=1, b=1))
-print(res)
-# 1.104, 1.181, 0981
-# 1.083, 1.204, 1.04
 
 # long形式への変換
 lbdat<-pivot_longer(data=bdat, cols=-Time,values_to = 'value', names_to = 'param')
