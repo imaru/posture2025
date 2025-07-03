@@ -9,8 +9,8 @@ jntn<-c('Head','Neck','rSldr','rElbw','rWrst','lSldr','lElbw','lWrst','Wst','rHi
 fr<-30
 
 # ここからの6行を変更する必要がある
-xwid<-320 # 動画の縦サイズ
-ywid<-568 # 動画の横サイズ
+xwid<-720 # 動画の縦サイズ
+ywid<-1280 # 動画の横サイズ
 height<-165 # 被写体の身長
 jd<-'data' # データが入っているフォルダ名
 begT<-2 # 解析開始時間（秒）、0の場合は最初から
