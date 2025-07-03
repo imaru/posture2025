@@ -17,7 +17,7 @@ joi<-c('WRIST_RIGHT','HEAD','SHOULDER_RIGHT','HIP_RIGHT', 'KNEE_RIGHT')
 wrst<-'WRIST_RIGHT'
 
 # 実験開始時の大きな動きの検出閾値 1の場合、この設定は使用しない
-thr<-1
+thr<-0
 
 # 測定時間の長さ。計測終了からこの時間の長さだけを解析対象とする
 tlen<-8
@@ -90,6 +90,14 @@ plot(gstrace)
 gexp<-ggplot(data=rslt,aes(x=V2, y=V5, colour = as.factor(V3)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
 plot(gexp)
 
+lendat<-rslt[,c(1:4)]
+slendat<-s_rslt[,c(1,2,4)]
+expdat<-s_rslt[,c(1,2,5)]
+
+source('anovakun_489.txt')
+anovakun(lendat, "sAB", long=T)
+anovakun(slendat, "sA", long=T)
+anovakun(expdat, "sA", long=T)
 
 # long形式への変換
 lbdat<-pivot_longer(data=bdat, cols=-Time,values_to = 'value', names_to = 'param')
@@ -129,7 +137,7 @@ for (i in 1:length(joi)){
   stddat<-rbind(stddat, temp)
 }
 colnames(stddat)<-c('joi','frame','time' ,'x','y','z')
-
+tlen<-1
 # 右手の高さと計測時間から計測地点開始時の設定
 wrsd<-stddat[which(stddat$joi==wrst),]$y
 oth<-which(abs(wrsd)>thr)
@@ -148,6 +156,8 @@ gshrd<-ggplot(data=lstddat[which(lstddat$joi=='SHOULDER_RIGHT'),], aes(x=time, y
 ghip<-ggplot(data=lstddat[which(lstddat$joi=='HIP_RIGHT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
 gwrst<-ggplot(data=lstddat[which(lstddat$joi=='WRIST_RIGHT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
 
+
+
 # 左半身グラフ
 #gshrd<-ggplot(data=lstddat[which(lstddat$joi=='SHOULDER_LEFT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
 #ghip<-ggplot(data=lstddat[which(lstddat$joi=='HIP_LEFT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
@@ -156,7 +166,7 @@ gwrst<-ggplot(data=lstddat[which(lstddat$joi=='WRIST_RIGHT'),], aes(x=time, y=po
 gbalance<-ggplot(lbdat[grep('Cp',lbdat$param),], aes(x=Time, y=value, color=param))+geom_line()+theme(legend.position = "top")
 
 # グラフ一括表示
-grid.arrange(ghead,gshrd,ghip,gbalance, nrow=4)
+grid.arrange(ghead,gshrd,ghip,nrow=3)
 
 # バランスボード積分値表示
 print(c(mean(abs(bdat$CpX)),mean(abs(bdat$CpY))))
