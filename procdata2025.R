@@ -2,7 +2,28 @@ library(jsonlite)
 library(tidyr)
 library(ggplot2)
 library(ggpp)
+library(stringr)
 library(gridExtra)
+
+if(Sys.info()["sysname"] == "Windows"){
+  if(as.integer(str_extract(Sys.info()["release"], "^[0-9]+")) >=8){
+    family_sans <- "Yu Gothic"
+    family_serif <- "Yu Mincho"
+  } else {
+    family_sans <- "MS Gothic"
+    family_serif <- "MS Mincho"
+  }
+} else if(Sys.info()["sysname"] == "Linux") {
+  family_sans <- "Noto Sans CJK JP"
+  family_serif <- "Noto Serif CJK JP"
+} else if(Sys.info()["sysname"] == "Darwin"){
+  family_serif <- "Hiragino Mincho ProN"
+  family_sans <- "Hiragino Sans"
+} else {
+  # インストールすればとりあえず動く
+  family_sans <- "Noto Sans CJK JP"
+  family_serif <- "Noto Serif CJK JP"
+}
 
 listfl<-choose.files()
 datlist<-read.csv(listfl)
@@ -28,7 +49,16 @@ kfreq<-30
 
 rslt<-data.frame()
 for (i in 1:nrow(proclist)){
-  for (j in 1:6){
+  fname<-paste("id_", proclist[i,2], ".pdf", sep="")
+  if (Sys.info()['sysname']=='Windows'){
+    cairo_pdf(fname, family = "Yu Gothic")
+  }else if(Sys.info()["sysname"] == "Linux") {
+    cairo_pdf(fname, family = "Noto Sans CJK JP")
+  }else{
+    quartz(type="pdf", file=fname, width=8, height=10)
+  }
+    for (j in 1:6){
+
     bfreq<-proclist[i,15+j]
     bfn<-paste0(datfld,'\\',proclist[i,8+j],'.txt')
     btemp<-read.table(bfn, skip=1)
@@ -63,10 +93,22 @@ for (i in 1:nrow(proclist)){
     }
     cumleng<-cumsum(leng)
     names(cumleng)<-as.factor(seq(1,nprd)*lendur)
-    barplot(cumleng, xlab='time(sec)', ylab='trace length')
-    title(paste0(as.character(cumleng[nprd/2]),'/',as.character(cumleng[nprd])))
     
+    
+    par(mfcol=c(1,2))
+    barplot(cumleng, xlab='time(sec)', ylab='trace length')
+    title(paste(proclist[i,9],proclist[i,3+j%/%3]))
+    barplot(t(leng), names.arg = as.factor(seq(1,nprd)))
     res<-nls(cumleng~a*seq(1,nprd)^b, start=c(a=1, b=1))
+    
+    # long形式への変換
+    lbdat<-pivot_longer(data=bdat, cols=-Time,values_to = 'value', names_to = 'param')
+    
+    # 重心方向と距離のグラフ作成
+    gdeg<-ggplot(lbdat[grep('deg',lbdat$param),], aes(x=Time, y=value))+geom_point()+ggtitle('orientation')
+    gscl<-ggplot(lbdat[grep('scl',lbdat$param),], aes(x=Time, y=value))+geom_line()+ggtitle('wight')
+    grid.arrange(gdeg,gscl, nrow=2)
+    
     #print(res)
     rslt[(i-1)*6+j,1]<-proclist[i,2]
     rslt[(i-1)*6+j,2]<-proclist[i,3+(j-1)%/%2]
@@ -75,7 +117,7 @@ for (i in 1:nrow(proclist)){
     rslt[(i-1)*6+j,5]<-coef(res)[2]
     rslt[(i-1)*6+j,6]<-coef(res)[1]
   }
-    
+  dev.off()
 }
 
 s_rslt<-rslt[rslt$V3==1,]
@@ -99,13 +141,7 @@ anovakun(lendat, "sAB", long=T)
 anovakun(slendat, "sA", long=T)
 anovakun(expdat, "sA", long=T)
 
-# long形式への変換
-lbdat<-pivot_longer(data=bdat, cols=-Time,values_to = 'value', names_to = 'param')
 
-# 重心方向と距離のグラフ作成
-gdeg<-ggplot(lbdat[grep('deg',lbdat$param),], aes(x=Time, y=value))+geom_point()+ggtitle('orientation')
-gscl<-ggplot(lbdat[grep('scl',lbdat$param),], aes(x=Time, y=value))+geom_line()+ggtitle('wight')
-grid.arrange(gdeg,gscl, nrow=2)
 
 # Kinectデータ読み込み
 fn<-file.choose()
