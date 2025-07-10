@@ -4,6 +4,9 @@ library(ggplot2)
 library(ggpp)
 library(stringr)
 library(gridExtra)
+library(dplyr)
+library(brms)
+library(rstan)
 
 if(Sys.info()["sysname"] == "Windows"){
   if(as.integer(str_extract(Sys.info()["release"], "^[0-9]+")) >=8){
@@ -57,8 +60,8 @@ for (i in 1:nrow(proclist)){
   }else{
     quartz(type="pdf", file=fname, width=8, height=10)
   }
-    for (j in 1:6){
-
+  for (j in 1:6){
+    
     bfreq<-proclist[i,15+j]
     bfn<-paste0(datfld,'\\',proclist[i,8+j],'.txt')
     btemp<-read.table(bfn, skip=1)
@@ -97,7 +100,7 @@ for (i in 1:nrow(proclist)){
     
     par(mfcol=c(1,2))
     barplot(cumleng, xlab='time(sec)', ylab='trace length')
-    title(paste(proclist[i,9],proclist[i,3+j%/%3]))
+    title(paste('id',proclist[i,2],proclist[i,3+j%/%3]))
     barplot(t(leng), names.arg = as.factor(seq(1,nprd)))
     res<-nls(cumleng~a*seq(1,nprd)^b, start=c(a=1, b=1))
     
@@ -106,7 +109,7 @@ for (i in 1:nrow(proclist)){
     
     # 重心方向と距離のグラフ作成
     gdeg<-ggplot(lbdat[grep('deg',lbdat$param),], aes(x=Time, y=value))+geom_point()+ggtitle('orientation')
-    gscl<-ggplot(lbdat[grep('scl',lbdat$param),], aes(x=Time, y=value))+geom_line()+ggtitle('wight')
+    gscl<-ggplot(lbdat[grep('scl',lbdat$param),], aes(x=Time, y=value))+geom_line()+ggtitle('weight')
     grid.arrange(gdeg,gscl, nrow=2)
     
     #print(res)
@@ -116,32 +119,100 @@ for (i in 1:nrow(proclist)){
     rslt[(i-1)*6+j,4]<-sum(leng)
     rslt[(i-1)*6+j,5]<-coef(res)[2]
     rslt[(i-1)*6+j,6]<-coef(res)[1]
+    rslt[(i-1)*6+j,7]<-proclist[i,22+(j-1)%%2*3+(j-1)%/%2*9]
+    rslt[(i-1)*6+j,8]<-proclist[i,23+(j-1)%%2*3+(j-1)%/%2*9]
+    rslt[(i-1)*6+j,9]<-proclist[i,24+(j-1)%%2*3+(j-1)%/%2*9]
+    if (j%%2==0){
+      rslt[(i-1)*6+j,10]<-proclist[i,28+(j-1)%/%2*9]
+      rslt[(i-1)*6+j,11]<-proclist[i,29+(j-1)%/%2*9]
+    }
+    else{
+      rslt[(i-1)*6+j,10]<-NA
+      rslt[(i-1)*6+j,11]<-NA
+    }
+    rslt[(i-1)*6+j,12]<-(j-1)%/%2+1
   }
   dev.off()
 }
 
-s_rslt<-rslt[rslt$V3==1,]
-s_rslt$strace <-rslt[rslt$V3==2,]$V4/rslt[rslt$V3==1,]$V4
+colnames(rslt)<-c('ID','condition','period','trace','beta','alpha','stime','control','fatigue','self','double','order')
 
-gtrace<-ggplot(data=rslt, aes(x=V2,y=V4,colour = as.factor(V3)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
+smr<-rslt %>% group_by(condition, period) %>% summarise(M_trace = mean(trace), SD_trace=sd(trace), M_beta=mean(beta), SD_beta=sd(beta))
+
+
+s_rslt<-rslt[rslt$period==2,]
+s_rslt$strace <-rslt[rslt$period==2,]$trace/rslt[rslt$period==1,]$trace
+
+gtrace<-ggplot(data=rslt, aes(x=condition,y=trace,colour = as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
 plot(gtrace)
 
-gstrace<-ggplot(data=s_rslt, aes(x=V2,y=strace))+geom_boxplot()+geom_jitter(width=0.1, height=0)
+gstrace<-ggplot(data=s_rslt, aes(x=condition,y=strace))+geom_boxplot()+geom_jitter(width=0.1, height=0)
 plot(gstrace)
 
-gexp<-ggplot(data=rslt,aes(x=V2, y=V5, colour = as.factor(V3)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
+gexp<-ggplot(data=s_rslt,aes(x=condition, y=beta, colour = as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
 plot(gexp)
 
-lendat<-rslt[,c(1:4)]
-slendat<-s_rslt[,c(1,2,4)]
-expdat<-s_rslt[,c(1,2,5)]
+gstime<-ggplot(data=s_rslt, aes(x=condition, y=stime, color=as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
+plot(gstime)
+
+gcon<-ggplot(data=s_rslt, aes(x=condition, y=control, color=as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
+plot(gcon)
+
+gftg<-ggplot(data=s_rslt, aes(x=condition, y=fatigue, color=as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
+plot(gftg)
+
+gself<-ggplot(data=s_rslt, aes(x=condition, y=self, color=as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
+plot(gself)
+
+gdouble<-ggplot(data=s_rslt, aes(x=condition, y=double, color=as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
+plot(gdouble)
+
+
+lendat<-rslt[,c('ID','condition','period','trace')]
+slendat<-s_rslt[,c('ID','condition','strace')]
+expdat<-s_rslt[,c('ID','condition','beta')]
+ctldat<-s_rslt[,c('ID','condition','control')]
+ftgdat<-s_rslt[,c('ID','condition','fatigue')]
+stimedat<-s_rslt[,c('ID','condition','stime')]
+selfdat<-s_rslt[,c('ID','condition','self')]
 
 source('anovakun_489.txt')
 anovakun(lendat, "sAB", long=T)
-anovakun(slendat, "sA", long=T)
+anovakun(slendat, "sA", long=T, geta=T)
 anovakun(expdat, "sA", long=T)
+anovakun(ctldat, "sA", long=T)
+anovakun(ftgdat, "sA", long=T)
+anovakun(stimedat, "sA", long=T)
 
+hist(slendat$strace)
+hist(expdat$beta)
 
+brmres<-brm(formula=trace~condition+as.factor(period)+as.factor(order),
+            family=gaussian(),
+            data=rslt,
+            seed=1,
+            iter=3000,
+            warmup = 1000,
+)
+summary(brmres)
+
+s_brmres<-brm(formula=strace~condition+as.factor(order),
+            family=shifted_lognormal(),
+            data=s_rslt,
+            seed=1,
+            iter=3000,
+            warmup = 1000,
+)
+summary(s_brmres)
+
+expres<-brm(formula=beta~condition+as.factor(order),
+            family=gaussian(),
+            data=s_rslt,
+            seed=1,
+            iter=3000,
+            warmup = 1000,
+)
+summary(expres)
 
 # Kinectデータ読み込み
 fn<-file.choose()
