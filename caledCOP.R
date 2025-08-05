@@ -45,11 +45,6 @@ thr<-0
 tlen<-8
 #tlen<-1
 
-
-prpt<-c(2.3,1,1,3.0)
-# prpt<-prpt/sum(prpt)
-# prpt<-c(1,1,1,1)
-
 rslt<-data.frame()
 rto<-data.frame()
 for (i in 1:nrow(proclist)){
@@ -69,9 +64,6 @@ for (i in 1:nrow(proclist)){
     ndat<-nrow(btemp)
     btemp$total<-apply(btemp[,9:12],1,sum) # 13
     btemp$totalr<-btemp$total/btemp[1,]$total
-    # btemp[,15:18]<-btemp[,9:12]*prpt # 15-18
-    # btemp[,19]<-apply(btemp[,15:18],1,sum) # 19
-    base<-sum(btemp[1,9:12]*prpt)
     temp<-apply(btemp, 1, function(x){
       rt <- x[4:7]/x[9:12]
       # mw<-x[9:12]*rt  #prpt
@@ -307,95 +299,3 @@ expres<-brm(formula=beta~condition+as.factor(order),
             warmup = 1000,
 )
 summary(expres)
-
-# Kinectデータ読み込み
-
-#jntn<-c('Head','Neck','rSldr','rElbw','rWrst','lSldr','lElbw','lWrst','Wst','rHip','rknee','rAnkl','lHip','lKnee','lAnkl','rEye','lEye','rEar','lEar','lToe','lHeel','rToe','rHeel')
-
-# Kinect で結果を図示する関節
-#joi<-c('WRIST_RIGHT','HEAD','SHOULDER_RIGHT','HIP_RIGHT', 'KNEE_RIGHT')
-#joi<-c('WRIST_RIGHT','HEAD','SHOULDER_LEFT','HIP_LEFT', 'KNEE_LEFT')
-# 測定開始時点検出のための関節
-#wrst<-'WRIST_RIGHT'
-
-# Kinectのサンプリングレート
-kfreq<-30
-
-fn<-file.choose()
-dat<-jsonlite::read_json(fn, simplifyVector = TRUE)
-
-joi=dat$joint_names
-nfrm<-length(dat$frames$bodies)
-joich<-array(dim=length(joi))
-for (i in 1:length(joi)){
-  joich[i]<-which(dat$joint_names==joi[i])  
-}
-
-joidat<-data.frame()
-joidist<-data.frame()
-
-# jsonデータから値の取得, 時間がかかる
-for (i in 1:nfrm){
-  cord<-dat$frames[1]$bodies[[i]]$joint_positions[[1]][joich,]
-  if (!is.null(cord)){
-    joitemp<-cbind(rep(i, length(joi)), joi, cord)
-    joidat<-rbind(joidat, joitemp)
-  }
-}
-colnames(joidat)<-c('frame','joi','x','y','z')
-
-# Kinectデータの正規化
-stddat<-data.frame()
-for (i in 1:length(joi)){
-  temp <- cbind(joidat[which(joidat$joi==joi[i]),c(3:5)] %>% lapply(as.numeric) %>% data.frame  %>% lapply(scale) %>% data.frame)
-  temp <- cbind(joi[i],min(as.numeric(joidat$frame)):max(as.numeric(joidat$frame)),min(as.numeric(joidat$frame)):max(as.numeric(joidat$frame))/30, temp)
-  stddat<-rbind(stddat, temp)
-}
-colnames(stddat)<-c('joi','frame','time' ,'x','y','z')
-tlen<-1
-# 右手の高さと計測時間から計測地点開始時の設定
-wrsd<-stddat[which(stddat$joi==wrst),]$y
-oth<-which(abs(wrsd)>thr)
-maxtpos<-max(nfrm/kfreq-tlen*60)*kfreq
-#maxtpos<-max(which(abs(wrsd)>thr))
-stddat<-stddat[which(stddat$frame>maxtpos),]
-
-joilen=data.frame()
-for (i in 1:length(joi)){
-  thisjoidat<-stddat[stddat$joi==joi[i],]
-  nprd<-floor(nrow(thisjoidat)/kfreq/lendur)
-  #print(nrow(thisjoidat))
-  attach(thisjoidat)
-  tlen=array(nrow(thisjoidat)-1)
-  for (j in 2:nrow(thisjoidat)){
-    tlen[j-1]=sqrt((x[j]-x[j-1])^2+(y[j]-y[j-1])^2+(z[j]-z[j-1])^2)
-    #print(tlen[j-1])
-  }
-  joilen<-rbind(joilen, c(joi[i],sum(tlen)))
-  
-}
-
-
-# 正規化データのlong形式への変換
-lstddat<-pivot_longer(stddat, cols=c('x','y','z'), values_to = 'pos')
-
-# 頭部グラフn
-ghead<-ggplot(data=lstddat[which(lstddat$joi=='HEAD'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
-
-# 右半身グラフ
-gshrd<-ggplot(data=lstddat[which(lstddat$joi=='SHOULDER_RIGHT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
-ghip<-ggplot(data=lstddat[which(lstddat$joi=='HIP_RIGHT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
-gwrst<-ggplot(data=lstddat[which(lstddat$joi=='WRIST_RIGHT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
-
-
-
-# 左半身グラフ
-#gshrd<-ggplot(data=lstddat[which(lstddat$joi=='SHOULDER_LEFT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
-#ghip<-ggplot(data=lstddat[which(lstddat$joi=='HIP_LEFT'),], aes(x=time, y=pos, color=name, linetype =joi))+geom_line()+xlim(maxtpos/30,nfrm/30)+theme(legend.position = "top")
-
-# バランスボード生データグラフ
-gbalance<-ggplot(lbdat[grep('Cp',lbdat$param),], aes(x=Time, y=value, color=param))+geom_line()+theme(legend.position = "top")
-
-# グラフ一括表示
-grid.arrange(ghead,gshrd,ghip,nrow=3)
-
