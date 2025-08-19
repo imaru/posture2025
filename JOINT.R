@@ -46,8 +46,7 @@ tlen<-8
 #tlen<-1
 lendur<-10
 
-for (i in 1:nrow(proclist)){
-  i<-14
+for (i in 17:nrow(proclist)){
   fname<-paste("joi_", proclist[i,2], ".pdf", sep="")
   if (Sys.info()['sysname']=='Windows'){
     cairo_pdf(fname, family = "Yu Gothic")
@@ -57,7 +56,6 @@ for (i in 1:nrow(proclist)){
     quartz(type="pdf", file=fname, width=8, height=10)
   }
   for (j in 1:6){
-    j<-4
     kfreq<-30
     kfn<-paste0(datfld,'\\',proclist[i,8+j],'.json')
     dat<-jsonlite::read_json(kfn, simplifyVector = TRUE)
@@ -125,5 +123,6 @@ for (i in 1:nrow(proclist)){
     save.image(paste0(as.character(i),'_',as.character(j),'.RData'))
   }
   dev.off()
+  
 }
 
