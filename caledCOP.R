@@ -9,6 +9,8 @@ library(dplyr)
 library(brms)
 library(rstan)
 
+# pdfファイル作成のためのフォント設定
+
 if(Sys.info()["sysname"] == "Windows"){
   if(as.integer(str_extract(Sys.info()["release"], "^[0-9]+")) >=8){
     family_sans <- "Yu Gothic"
@@ -29,25 +31,27 @@ if(Sys.info()["sysname"] == "Windows"){
   family_serif <- "Noto Serif CJK JP"
 }
 
+# 実験リストを読み込む
 
 listfl<-choose.files()
 datlist<-read.csv(listfl)
 proclist<-datlist[which(datlist$proc==1),]
 
+# データフォルダの指定
+
 datfld<-choose.dir()
-
-
-
-# 実験開始時の大きな動きの検出閾値 1の場合、この設定は使用しない
-thr<-0
 
 # 測定時間の長さ。計測終了からこの時間の長さだけを解析対象とする
 tlen<-8
-#tlen<-1
 
 rslt<-data.frame()
 rto<-data.frame()
+
+# 複数の実験結果を一度に処理するためのfor文
+
 for (i in 1:nrow(proclist)){
+  
+  # 結果をPDFファイルにするための設定
   fname<-paste("shifted_raw_", proclist[i,2], ".pdf", sep="")
   if (Sys.info()['sysname']=='Windows'){
     cairo_pdf(fname, family = "Yu Gothic")
@@ -56,24 +60,27 @@ for (i in 1:nrow(proclist)){
   }else{
     quartz(type="pdf", file=fname, width=8, height=10)
   }
+  
+  # 6セッション分の繰り返し
   for (j in 1:6){
     bfreq<-proclist[i,15+j]
     bfn<-paste0(datfld,'\\',proclist[i,8+j],'.txt')
     btemp<-read.table(bfn, skip=1)
-
+    
     ndat<-nrow(btemp)
     btemp$total<-apply(btemp[,9:12],1,sum) # 13
     btemp$totalr<-btemp$total/btemp[1,]$total
     temp<-apply(btemp, 1, function(x){
       rt <- x[4:7]/x[9:12]
-      # mw<-x[9:12]*rt  #prpt
+      # 次の行でキャリブレーション結果を適用している
       mw <- (x[9:12] - c(6017.5,16353.4,13677.5,2405.16)) / c(103.976,111.816,102.056,103.784)
-      #mw<-x[9:12]*prpt
-      #mtotal<-sum(mw)
-      #mw<-mw*base/mtotal*x[14]
       mtotal<-sum(mw)
+      
+      # 重心座標の計算 43.3と23.8はバランスボードのサイズ
       cpx<-((mw[4]+mw[2])-(mw[3]+mw[1]))/mtotal*43.3/2
       cpy<-((mw[3]+mw[4])-(mw[1]+mw[2]))/mtotal*23.8/2
+      
+      # 重心を相対座標で算出
       rcpx<-((x[12]+x[10])-(x[9]+x[11]))/x[13]*43.3/2
       rcpy<-((x[11]+x[12])-(x[9]+x[10]))/x[13]*23.8/2
       trn<-c(mw, mtotal, cpx,cpy, rcpx, rcpy, rt)
@@ -83,10 +90,9 @@ for (i in 1:nrow(proclist)){
     btemp[,15:27]<-t(temp)
     colnames(btemp)<-c('Time','CpX','CpY','BL','BR','TL','TR','Wgt','RBL','RBR','RTL','RTR','total','total2', 'pBL','pBR','pTL','pTR','ptotal', 'mCpX','mCpY', 'rCpX','rCpY','ceBL','ceBR','ceTL','ceTR')
     rlen<-((j-1)%%2)*(tlen-1)+1
-    btemp$mCpX<-btemp$rCpX# -mean(btemp[1:(bfreq*3),]$rCpX)
-    btemp$mCpY<-btemp$rCpY# -mean(btemp[1:(bfreq*3),]$rCpY)
+    btemp$mCpX<-btemp$rCpX
+    btemp$mCpY<-btemp$rCpY
     # 解析対象時間の設定
-    # maxtbal<-max(which(abs(scale(btemp$CpX))>thr & btemp$Time < max(btemp$Time)-tlen*60))
     maxtbal<-max(which(btemp$Time < max(btemp$Time)-60*rlen))-2
     bdat<-btemp[maxtbal:ndat,]
     datlen<-nrow(bdat)
@@ -119,18 +125,21 @@ for (i in 1:nrow(proclist)){
       r_leng[k]<-sum(r_difflen[(1+(k-1)*(bfreq*lendur)):((bfreq*lendur)*k)])
       m_leng[k]<-sum(m_difflen[(1+(k-1)*(bfreq*lendur)):((bfreq*lendur)*k)])
     }
+    
+    # 累積移動距離
     cumleng<-cumsum(leng)
     r_cumleng<-cumsum(r_leng)
     m_cumleng<-cumsum(m_leng)
     names(cumleng)<-as.factor(seq(1,nprd)*lendur)
     
-    
+    # グラフ作成    
     par(mfcol=c(1,2))
     barplot(m_cumleng, xlab='time(sec)', ylab='trace length')
     title(paste('id',proclist[i,2],proclist[i,3+j%/%3]))
     barplot(t(m_leng), names.arg = as.factor(seq(1,nprd)))
     res<-nls(m_cumleng~a*seq(1,nprd)^b, start=c(a=1, b=1))
     
+    # 変動係数計算
     CVx<-sd(btemp$CpX)/mean(btemp$CpX)
     CVy<-sd(btemp$CpY)/mean(btemp$CpY)
     
@@ -145,8 +154,7 @@ for (i in 1:nrow(proclist)){
     gscl<-ggplot(lbdat[grep('scl',lbdat$param),], aes(x=Time, y=value))+geom_line()+ggtitle('weight')
     grid.arrange(gdeg,gscl, nrow=2)
     
-    #print(res)
-    #print(as.data.frame(t(apply(btemp[,15:18],2,mean))))
+    # 色々なグラフのためのデータ作成 
     rslt[(i-1)*6+j,1]<-proclist[i,2]
     rslt[(i-1)*6+j,2]<-proclist[i,3+(j-1)%/%2]
     rslt[(i-1)*6+j,3]<-(j-1)%%2+1
@@ -180,18 +188,16 @@ for (i in 1:nrow(proclist)){
   dev.off()
 }
 
+
 colnames(rslt)<-c('ID','condition','period','trace','r_trace','m_trace','beta','alpha','stime','control','fatigue','self','double','order','CVx', 'CVy', 'mCVx', 'mCVy','mX','mY','sdX','sdY')
 
 smr<-rslt %>% group_by(condition, period) %>% summarise(M_trace = mean(trace), SD_trace=sd(trace), M_beta=mean(beta), SD_beta=sd(beta))
-
-
 
 s_rslt<-rslt[rslt$period==2,]
 s_rslt$strace <-rslt[rslt$period==2,]$trace/rslt[rslt$period==1,]$trace
 
 m_s_rslt<-rslt[rslt$period==2,]
 m_s_rslt$strace <-rslt[rslt$period==2,]$m_trace/rslt[rslt$period==1,]$m_trace
-
 
 gtrace<-ggplot(data=rslt, aes(x=condition,y=m_trace,colour = as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
 plot(gtrace)
@@ -217,8 +223,6 @@ plot(gsdx)
 gsdy<-ggplot(data=m_s_rslt,aes(x=condition, y=sdY, colour = as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
 plot(gsdy)
 
-
-
 gexp<-ggplot(data=s_rslt,aes(x=condition, y=beta, colour = as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
 plot(gexp)
 
@@ -237,6 +241,7 @@ plot(gself)
 gdouble<-ggplot(data=s_rslt, aes(x=condition, y=double, color=as.factor(period)))+geom_boxplot()+geom_jitter(width=0.1, height=0)
 plot(gdouble)
 
+# 以下は統計的解析
 
 lendat<-rslt[,c('ID','condition','period','m_trace')]
 slendat<-m_s_rslt[,c('ID','condition','strace')]
@@ -251,8 +256,6 @@ sdxdat<-s_rslt[,c('ID','condition','sdX')]
 sdydat<-s_rslt[,c('ID','condition','sdY')]
 mxdat<-s_rslt[,c('ID','condition','mX')]
 mydat<-s_rslt[,c('ID','condition','mY')]
-
-
 
 source('anovakun_489.txt')
 anovakun(lendat, "sAB", long=T)
@@ -283,11 +286,11 @@ brmres<-brm(formula=trace~condition+as.factor(period)+as.factor(order),
 summary(brmres)
 
 s_brmres<-brm(formula=strace~condition+as.factor(order),
-            family=shifted_lognormal(),
-            data=s_rslt,
-            seed=1,
-            iter=3000,
-            warmup = 1000,
+              family=shifted_lognormal(),
+              data=s_rslt,
+              seed=1,
+              iter=3000,
+              warmup = 1000,
 )
 summary(s_brmres)
 
